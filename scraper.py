@@ -260,17 +260,45 @@ def main():
     
     # Interactive mode if no app ID is provided
     app_id = args.app
+    count = args.count
+    
     if not app_id:
         app_input = input("Enter Google Play Store app URL or app ID: ")
         app_id = get_app_id_from_url(app_input.strip())
-    else:
-        app_id = get_app_id_from_url(app_id)
-    
-    # Interactive mode if no country code is provided
-    country_code = args.country
-    if not country_code:
+        
+        # Interactive mode if no country code is provided
         display_country_codes()
         country_code = input("\nEnter country code (e.g., us, gb, ca): ").strip().lower()
+        
+        # Ask user how many reviews they want to fetch
+        print("\nHow many reviews would you like to fetch?")
+        print("1. Default (100 reviews)")
+        print("2. Custom number")
+        print("3. All available reviews (may take longer)")
+        review_choice = input("Enter your choice (1-3): ")
+        
+        if review_choice == "1":
+            count = 100
+        elif review_choice == "2":
+            try:
+                count = int(input("Enter number of reviews to fetch: "))
+            except ValueError:
+                print("Invalid number. Using default (100 reviews).")
+                count = 100
+        elif review_choice == "3":
+            count = 0  # 0 means fetch all available reviews
+            print("Fetching all available reviews. This may take some time...")
+        else:
+            print("Invalid choice. Using default (100 reviews).")
+            count = 100
+    else:
+        app_id = get_app_id_from_url(app_id)
+        
+        # Interactive mode if no country code is provided
+        country_code = args.country
+        if not country_code:
+            display_country_codes()
+            country_code = input("\nEnter country code (e.g., us, gb, ca): ").strip().lower()
     
     print(f"Fetching details for app ID: {app_id} from country: {country_code}")
     
@@ -284,7 +312,7 @@ def main():
         print(f"Rating: {details.get('score', 'N/A')} ({details.get('ratings', 0)} ratings)")
         
         # Fetch reviews
-        reviews_data = fetch_reviews(app_id, country_code, args.count)
+        reviews_data = fetch_reviews(app_id, country_code, count)
         
         if reviews_data:
             # Save to CSV
@@ -294,7 +322,7 @@ def main():
     else:
         print(f"Could not fetch app details for {app_id}. Using app ID as name.")
         # Try to fetch reviews anyway
-        reviews_data = fetch_reviews(app_id, country_code, args.count)
+        reviews_data = fetch_reviews(app_id, country_code, count)
         
         if reviews_data:
             # Save to CSV
