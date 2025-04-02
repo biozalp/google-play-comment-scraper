@@ -8,7 +8,7 @@ import os
 from google_play_scraper import app as app_details
 from google_play_scraper import Sort, reviews_all, reviews
 
-# Country codes mapping for user reference
+# Country codes mapping for user reference with their primary language codes
 COUNTRY_CODES = {
     'United States': 'us',
     'United Kingdom': 'gb',
@@ -70,12 +70,72 @@ def get_app_id_from_url(url):
     else:
         return url  # Assume the input is already an app ID
 
+# Language code mapping for countries
+LANGUAGE_CODES = {
+    'us': 'en', # United States - English
+    'gb': 'en', # United Kingdom - English
+    'ca': 'en', # Canada - English (could also be 'fr' for French Canada)
+    'au': 'en', # Australia - English
+    'in': 'en', # India - English (multiple languages, but English is common)
+    'de': 'de', # Germany - German
+    'fr': 'fr', # France - French
+    'jp': 'ja', # Japan - Japanese
+    'br': 'pt', # Brazil - Portuguese
+    'mx': 'es', # Mexico - Spanish
+    'es': 'es', # Spain - Spanish
+    'it': 'it', # Italy - Italian
+    'ru': 'ru', # Russia - Russian
+    'kr': 'ko', # South Korea - Korean
+    'tr': 'tr', # Turkey - Turkish
+    'cn': 'zh', # China - Chinese
+    'id': 'id', # Indonesia - Indonesian
+    'my': 'ms', # Malaysia - Malay
+    'ph': 'en', # Philippines - English (Filipino/Tagalog also used)
+    'sg': 'en', # Singapore - English
+    'th': 'th', # Thailand - Thai
+    'vn': 'vi', # Vietnam - Vietnamese
+    'eg': 'ar', # Egypt - Arabic
+    'za': 'en', # South Africa - English
+    'ae': 'ar', # UAE - Arabic
+    'sa': 'ar', # Saudi Arabia - Arabic
+    'il': 'he', # Israel - Hebrew
+    'ar': 'es', # Argentina - Spanish
+    'cl': 'es', # Chile - Spanish
+    'co': 'es', # Colombia - Spanish
+    'pe': 'es', # Peru - Spanish
+    've': 'es', # Venezuela - Spanish
+    'be': 'nl', # Belgium - Dutch/French
+    'nl': 'nl', # Netherlands - Dutch
+    'pl': 'pl', # Poland - Polish
+    'se': 'sv', # Sweden - Swedish
+    'ch': 'de', # Switzerland - German/French/Italian
+    'at': 'de', # Austria - German
+    'dk': 'da', # Denmark - Danish
+    'fi': 'fi', # Finland - Finnish
+    'no': 'no', # Norway - Norwegian
+    'gr': 'el', # Greece - Greek
+    'hu': 'hu', # Hungary - Hungarian
+    'cz': 'cs', # Czech Republic - Czech
+    'pt': 'pt', # Portugal - Portuguese
+    'ro': 'ro', # Romania - Romanian
+    'ua': 'uk', # Ukraine - Ukrainian
+    'nz': 'en', # New Zealand - English
+    'ie': 'en', # Ireland - English
+}
+
+def get_language_for_country(country_code):
+    """Get the appropriate language code for a country code."""
+    return LANGUAGE_CODES.get(country_code.lower(), 'en')  # Default to English if country not found
+
 def get_app_details(app_id, country_code):
     """Get app details using google-play-scraper."""
     try:
+        # Get the appropriate language for the country
+        lang = get_language_for_country(country_code)
+        
         result = app_details(
             app_id,
-            lang='en',  # Language for the app details
+            lang=lang,  # Language appropriate for the country
             country=country_code  # Country for the app details
         )
         return result
@@ -85,24 +145,34 @@ def get_app_details(app_id, country_code):
 
 def fetch_reviews(app_id, country_code, count=100):
     """Fetch reviews for the given app ID from Google Play Store."""
-    print(f"Fetching up to {count} reviews for {app_id} from country: {country_code}")
+    print(f"Fetching reviews for {app_id} from country: {country_code}")
+    
+    # Get the appropriate language for the country
+    lang = get_language_for_country(country_code)
+    print(f"Using language code: {lang} for country: {country_code}")
     
     try:
-        # If count is large, use reviews_all (might take longer)
-        if count > 100:
-            print("This might take a while for a large number of reviews...")
-            result, continuation_token = reviews(
+        # For unlimited reviews or large counts, use reviews_all
+        if count > 1000 or count == 0:  # 0 means fetch all available reviews
+            print("Fetching all available reviews (this might take a while)...")
+            result = reviews_all(
                 app_id,
-                lang='en',  # Language for the reviews
+                lang=lang,  # Language appropriate for the country
                 country=country_code,  # Country for the reviews
                 sort=Sort.NEWEST,  # Sort by newest reviews first
-                count=count  # Number of reviews to fetch
             )
+            print(f"Found {len(result)} total reviews")
+            
+            # If count is 0, get all reviews, otherwise limit to the specified count
+            if count > 0 and len(result) > count:
+                result = result[:count]
+                print(f"Limiting to {count} reviews as requested")
         else:
             # For smaller counts, use the regular reviews function
+            print(f"Fetching up to {count} reviews...")
             result, continuation_token = reviews(
                 app_id,
-                lang='en',
+                lang=lang,  # Language appropriate for the country
                 country=country_code,
                 sort=Sort.NEWEST,
                 count=count
@@ -178,7 +248,7 @@ def main():
     parser = argparse.ArgumentParser(description='Scrape reviews from Google Play Store')
     parser.add_argument('--app', help='App ID or Google Play Store URL')
     parser.add_argument('--country', help='Country code (e.g., us, gb, ca)')
-    parser.add_argument('--count', type=int, default=100, help='Number of reviews to fetch (default: 100)')
+    parser.add_argument('--count', type=int, default=100, help='Number of reviews to fetch (default: 100, use 0 for all available reviews)')
     parser.add_argument('--output', default='.', help='Output directory for CSV file')
     parser.add_argument('--list-countries', action='store_true', help='List available country codes')
     
