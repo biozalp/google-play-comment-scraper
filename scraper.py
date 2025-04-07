@@ -202,11 +202,16 @@ def fetch_reviews(app_id, country_code, count=100):
         print(f"Error fetching reviews: {e}")
         return []
 
-def save_to_csv(reviews, app_name, output_dir='.'):
+def save_to_csv(reviews, app_name, output_dir='output'):
     """Save reviews to a CSV file."""
     # Clean app name for filename
     safe_app_name = ''.join(c if c.isalnum() or c == ' ' else '_' for c in app_name)
     safe_app_name = safe_app_name.replace(' ', '_')
+    
+    # Create output directory if it doesn't exist
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+        print(f"Created directory: {output_dir}")
     
     timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
     filename = f"{safe_app_name}_{timestamp}.csv"
@@ -249,7 +254,7 @@ def main():
     parser.add_argument('--app', help='App ID or Google Play Store URL')
     parser.add_argument('--country', help='Country code (e.g., us, gb, ca)')
     parser.add_argument('--count', type=int, default=100, help='Number of reviews to fetch (default: 100, use 0 for all available reviews)')
-    parser.add_argument('--output', default='.', help='Output directory for CSV file')
+    parser.add_argument('--output', default='output', help='Output directory for CSV file (default: output)')
     parser.add_argument('--list-countries', action='store_true', help='List available country codes')
     
     args = parser.parse_args()
